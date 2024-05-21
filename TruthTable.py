@@ -36,11 +36,8 @@ class TruthTableEngine(InferenceEngine):
 
     def execute_algorithm(self):
         count, true_models = self.tt_entails()
-        for model in self.models:
-            if model in true_models:
+        for model in self.models: #Debug 
                 print("YES", model)
-            else:
-                print("NO", model)
         if count > 0:
             print("YES:", count)
         else:

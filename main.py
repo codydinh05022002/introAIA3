@@ -1,7 +1,7 @@
 import sys
 from textparse import TextParser
 from TruthTable import *
-from BackChain import *
+from BackwardChain import *
 from ForwardChain import *
 
 if __name__ == "__main__":
