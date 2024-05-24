@@ -3,62 +3,44 @@ from iengine import *
 
 class TruthTableEngine(InferenceEngine):
     def __init__(self, kb, query, symbols):
-        self.kb = kb
-        self.query = query
-        self.symbols = list(symbols)
+        super().__init__(kb, query, symbols)
+        self.models = []
+
+    def tt_entails(self):
+        symbols = list(self.symbols)
+        self.models = []  # Clear models before checking entailment
+        self.tt_check_all(symbols)
+        true_models = [model for model in self.models if self.pl_true(self.query, symbols, model)]
+        return len(true_models), true_models
+
+    def tt_check_all(self, symbols):
+        # Generate all combinations of truth values for the symbols
+        for model in product([True, False], repeat=len(symbols)):
+            model_dict = {symbols[i]: model[i] for i in range(len(symbols))}
+            if all(self.pl_true(sentence, symbols, model_dict) for sentence in self.kb):
+                self.models.append(model_dict)
+
+    def pl_true(self, sentence, symbols, model):
+        if '&' in sentence:
+            parts = sentence.split('&')
+            return all(self.pl_true(part.strip(), symbols, model) for part in parts)
+        elif '=>' in sentence:
+            antecedent, consequent = sentence.split('=>', 1)
+            result = not self.pl_true(antecedent.strip(), symbols, model) or self.pl_true(consequent.strip(), symbols, model)
+            return result
+        else:
+            # Handle negation
+            if sentence.startswith('~'):
+                return not self.pl_true(sentence[1:].strip(), symbols, model)
+            # Evaluate the atomic sentence based on the model
+            if sentence in model:
+                return model[sentence]
+            else:
+                return False  # If the sentence is not a recognized symbol, return False
 
     def execute_algorithm(self):
-        models = self.generate_all_models()
-        valid_models = 0
-        total_models = 0
-        valid_model_list = []
-
-        for model in models:
-            # Evaluate KB for the current model
-            kb_result = self.evaluate_kb(model)
-            query_result = self.evaluate_query(model) if kb_result else False
-
-            if kb_result:
-                total_models += 1  # Count models where KB is true
-                if query_result:
-                    valid_models += 1  # Count models where KB and query are true
-                    valid_model_list.append(model)
-
-        if valid_models > 0:
-            print(f"YES: {valid_models}")
+        count, true_models = self.tt_entails()
+        if count > 0:
+            print("YES:", count)
         else:
             print("NO")
-
-    def generate_all_models(self):
-        all_models = []
-        for values in product([True, False], repeat=len(self.symbols)):
-            model = dict(zip(self.symbols, values))
-            all_models.append(model)
-        return all_models
-
-    def evaluate_kb(self, model):
-        for clause in self.kb:
-            clause_result = self.evaluate_clause(clause, model)
-            if not clause_result:
-                return False
-        return True
-
-    def evaluate_query(self, model):
-        query_result = model[self.query]
-        return query_result
-
-    def evaluate_clause(self, clause, model):
-        if '=>' in clause:
-            antecedent, consequent = clause.split('=>')
-            antecedent = antecedent.strip()
-            consequent = consequent.strip()
-            return not self.evaluate_expression(antecedent, model) or self.evaluate_expression(consequent, model)
-        else:
-            return self.evaluate_expression(clause, model)
-
-    def evaluate_expression(self, expression, model):
-        if '&' in expression:
-            symbols = [symbol.strip() for symbol in expression.split('&')]
-            return all(model[symbol] for symbol in symbols)
-        else:
-            return model[expression.strip()]
