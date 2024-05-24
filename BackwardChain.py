@@ -1,56 +1,45 @@
-from iengine import *  
-from collections import OrderedDict
+from iengine import *
 
-class BackwardChainingEngine(InferenceEngine):  
-    def __init__(self, kb, query, symbols): 
-        super().__init__(kb, query, symbols)  
-        self.known_facts = OrderedDict()  # Dictionary to store known facts in order
-        self.inferred = set()  # Set to keep track of inferred facts
+class BackwardChainingEngine(InferenceEngine):
+    def __init__(self, kb, query, symbols, known_facts):
+        self.kb = kb
+        self.query = query
+        self.symbols = symbols
+        self.known_facts = set(known_facts)
+        self.visited = set()  # Set of visited elements to avoid revisiting, 
+        self.inferred_facts = []  # Start empty, list to store the inferred facts as the algorithm executes
 
-    def backward_chain(self):  
-        result = self.bc_or(self.query)  
-        if result:
-            print("YES:", list(self.known_facts.keys()))  
+    def execute_algorithm(self):
+        if self.backward_chain(self.query): #start with goal = query, then work backwards
+            print(f"YES: {', '.join(self.inferred_facts)}")
         else:
-            print("NO")  
-        return result 
+            print("NO")
 
-    def bc_or(self, goal):  # handle OR operation in bc
-        if goal in self.known_facts:  
+    def backward_chain(self, goal):
+        # Check if the goal is known fact
+        if goal in self.known_facts:
+            if goal not in self.inferred_facts:
+                self.inferred_facts.append(goal)
             return True
 
-        if goal in self.inferred: 
+        # Avoid revisiting same goal in recursive methods and enter infinite loop
+        if goal in self.visited:
             return False
+        self.visited.add(goal)
 
-        self.inferred.add(goal)  # Add goal to the set of inferred facts
+        # Find rules that conclude  goal
+        for clause in self.kb:
+            if '=>' in clause:
+                antecedent, consequent = clause.split('=>')
+                antecedent = antecedent.strip()
+                consequent = consequent.strip()
+                if consequent == goal:
+                    subgoals = [subgoal.strip() for subgoal in antecedent.split('&')] #split subgoals in case of a&b => c, etc.
 
-        applicable_rules = [rule for rule in self.kb if self.consequent(rule) == goal]  # Find applicable rules for the goal
+                    if all(self.backward_chain(subgoal) for subgoal in subgoals): #checks if all the antecedents can be satisfied/proved true
+                        self.known_facts.add(goal) #add to known facts to help with looping process
+                        if goal not in self.inferred_facts:
+                            self.inferred_facts.append(goal)
+                        return True
 
-        for rule in applicable_rules:  # Iterate over applicable rules
-            if self.bc_and(self.antecedents(rule)):  # Check if all antecedents of the rule can be satisfied
-                self.known_facts[goal] = None  # If so, add the goal to known facts
-                print("Add", goal)  # Print that the goal is added
-                return True  # Return True
-
-        return False  # If no applicable rule found, return False
-
-    def bc_and(self, goals):  # Method to handle AND operation in backward chaining
-        for goal in goals:  # Iterate over goals
-            if not self.bc_or(goal):  # If any goal cannot be satisfied, return False
-                return False
-        return True  # If all goals can be satisfied, return True
-
-    def antecedents(self, rule):  # Method to extract antecedents from a rule
-        if '=>' in rule:  # If the rule is an implication
-            antecedent, _ = rule.split('=>', 1)  # Split the rule into antecedent and consequent
-            return [part.strip() for part in antecedent.split('&')]  # Split antecedent by '&' and strip whitespaces
-        return []  # If not an implication, return an empty list
-
-    def consequent(self, rule):  # Method to extract consequent from a rule
-        if '=>' in rule:  # If the rule is an implication
-            _, consequent = rule.split('=>', 1)  # Split the rule into antecedent and consequent
-            return consequent.strip()  # Return the stripped consequent
-        return rule.strip()  # If not an implication, return the stripped rule
-
-    def execute_algorithm(self):  # Method to execute the backward chaining algorithm
-        self.backward_chain()  # Call the backward chaining method to start the inference process
+        return False

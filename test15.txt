@@ -1,0 +1,4 @@
+TELL
+m5 => n5; n5 & o5 => p5; p5 => q5; q5 & r5 => s5; s5 => t5; t5 & u5 => v5; v5 & w5 => x5; x5 & y5 => z5; m5; o5; r5; u5; w5;
+ASK
+z5

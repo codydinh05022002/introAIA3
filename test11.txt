@@ -1,0 +1,4 @@
+TELL
+m3 => n3; n3 & o3 => p3; p3 => q3; q3 & r3 => s3; s3 => t3; t3 & u3 => v3; v3 & w3 => x3; x3 & y3 => z3; m3; o3; r3; u3; w3;
+ASK
+z3
