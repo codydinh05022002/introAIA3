@@ -24,6 +24,7 @@ class fileReader:
                             else:
                                 self.known_facts.append(clause)
                                 self.symbols.add(clause)
+                                self.kb.append(clause)  # Add known fact to kb
 
                 self.query = lines[ask_index + 1].strip()
 
